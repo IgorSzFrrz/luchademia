@@ -1,29 +1,44 @@
 # Luchademia
 
-> Bata sua frequência. Derrote os outros.
+> Bata sua frequencia. Derrote os outros.
 
-Jogo de frequência na academia em formato PvP. Conceito completo em [`luchademia_conceito.md`](luchademia_conceito.md).
+Jogo mobile de frequencia na academia em formato PvP. Conceito completo em
+[`luchademia_conceito.md`](luchademia_conceito.md).
 
 ## Estrutura
 
-```
+```text
 luchademia/
-├── app/                    Aplicativo React Native (Expo SDK 54)
-│   ├── App.tsx             Entry point
-│   ├── src/
-│   │   ├── components/     Componentes compartilhados
-│   │   ├── lib/            Clientes (Supabase, etc)
-│   │   ├── navigation/     Stack raiz + tabs + onboarding
-│   │   ├── screens/        Telas (Home, Search, Create, Ranking, Profile, Onboarding)
-│   │   ├── store/          Zustand stores (auth, …)
-│   │   ├── theme/          Cores e spacing
-│   │   └── types/          Tipos de domínio
-│   ├── app.json            Config Expo (permissões, plugins, scheme)
-│   └── .env.example        Variáveis públicas (Supabase, Google Maps)
-└── supabase/
-    └── migrations/
-        └── 0001_init.sql   Schema do MVP (profiles, gyms, battles, checkins, damage)
+|-- app/                    Aplicativo React Native (Expo SDK 54)
+|   |-- App.tsx             Entry point
+|   |-- src/
+|   |   |-- components/     Componentes compartilhados
+|   |   |-- lib/            Clientes (Supabase, etc)
+|   |   |-- navigation/     Stack raiz + tabs + onboarding
+|   |   |-- screens/        Telas do app
+|   |   |-- store/          Zustand stores
+|   |   |-- theme/          Cores, fontes e spacing
+|   |   `-- types/          Tipos de dominio
+|   |-- app.json            Config Expo
+|   `-- .env.example        Variaveis publicas (Supabase, Google Maps)
+`-- supabase/
+    `-- migrations/
+        `-- 0001_init.sql   Schema do MVP
 ```
+
+## Stack atual
+
+- Expo SDK 54
+- React Native 0.81
+- React 19
+- TypeScript strict
+- React Navigation 7
+- Zustand
+- Supabase JS v2
+- PostgreSQL + PostGIS via Supabase
+- `expo-location` para o check-in do MVP
+- `expo-notifications` para push notifications futuras
+- `react-native-maps` para mapas
 
 ## Setup
 
@@ -33,34 +48,41 @@ luchademia/
 cd app
 copy .env.example .env       # preencha URL/keys
 npm install
-npx expo start --dev-client
+npm run start
 ```
 
-> O MVP usa `react-native-background-geolocation` (módulo nativo), portanto requer
-> **Expo dev client** — Expo Go não basta. Gere o dev client com EAS:
->
-> ```powershell
-> npx eas build --profile development --platform ios
-> npx eas build --profile development --platform android
-> ```
+Scripts uteis:
+
+```powershell
+npm run typecheck
+npm run check:deps
+npm run start:dev-client
+```
+
+Para o MVP, a estrategia de localizacao e `expo-location` com validacao
+server-side no Supabase. O app nao depende de `react-native-background-geolocation`
+nesta fase. Se a V1 exigir monitoramento robusto em background, ai vale introduzir
+dev client/EAS e uma biblioteca nativa dedicada.
 
 ### 2. Backend (Supabase)
 
 1. Crie um projeto em [supabase.com](https://supabase.com).
-2. Em **SQL Editor**, rode o conteúdo de `supabase/migrations/0001_init.sql`.
-3. Em **Authentication → Providers**, habilite **Google**.
+2. Em **SQL Editor**, rode o conteudo de `supabase/migrations/0001_init.sql`.
+3. Em **Authentication -> Providers**, habilite **Google**.
 4. Copie `URL` e `anon key` para `app/.env`.
 
-## Estado atual (fundação)
+## Estado atual
 
-- [x] Scaffold Expo TS com dark theme
-- [x] Navegação: Onboarding (Welcome → LinkGym) + Tab bar (5 abas)
+- [x] Scaffold Expo TS com tema customizado
+- [x] Navegacao: onboarding + tabs + fluxos auxiliares
 - [x] Cliente Supabase + auth store (Zustand)
 - [x] Schema SQL inicial com RLS
-- [x] `app.json` com permissões iOS/Android para localização
-- [ ] Google OAuth (próximo: `expo-auth-session`)
-- [ ] Tela de check-in (GPS + timer de 15 min)
+- [x] `app.json` alinhado a localizacao foreground para o MVP
+- [x] Scripts basicos de validacao
+- [ ] Google OAuth real
+- [ ] Selecao real de academia
+- [ ] Check-in real com GPS + timer de 15 min
 - [ ] Listagem real de batalhas
-- [ ] Edge Functions: validação de check-in, job de meia-noite (dano + no-show)
+- [ ] Edge Functions: validacao de check-in e job de dano/no-show
 
-Roadmap completo na seção 10 do conceito.
+Roadmap completo na secao 10 do conceito.

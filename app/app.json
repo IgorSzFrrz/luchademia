@@ -17,12 +17,7 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.luchademia.app",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Luchademia usa sua localização para validar o check-in na sua academia.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Luchademia monitora sua permanência na academia em background durante os 15 minutos do check-in.",
-        "UIBackgroundModes": [
-          "location",
-          "fetch"
-        ]
+        "NSLocationWhenInUseUsageDescription": "Luchademia usa sua localizacao para validar o check-in na sua academia."
       }
     },
     "android": {
@@ -35,10 +30,7 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION",
-        "FOREGROUND_SERVICE",
-        "FOREGROUND_SERVICE_LOCATION"
+        "ACCESS_COARSE_LOCATION"
       ]
     },
     "web": {
@@ -48,9 +40,9 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Luchademia usa sua localização para validar o check-in na sua academia.",
-          "isAndroidBackgroundLocationEnabled": true,
-          "isIosBackgroundLocationEnabled": true
+          "locationWhenInUsePermission": "Luchademia usa sua localizacao para validar o check-in na sua academia.",
+          "isAndroidBackgroundLocationEnabled": false,
+          "isIosBackgroundLocationEnabled": false
         }
       ],
       "expo-notifications",

@@ -1,5 +1,12 @@
 # LUCHADEMIA
 
+> Nota de Fase 0 (maio/2026): a stack efetiva do app esta em Expo SDK 54,
+> React Native 0.81, React 19 e TypeScript strict. Para o MVP, a estrategia
+> recomendada de check-in e `expo-location` com validacao server-side no
+> Supabase, sem `react-native-background-geolocation`. Trechos abaixo que citam
+> Expo SDK 52, dev client obrigatorio ou background geolocation nativo devem ser
+> tratados como historico ate a revisao completa deste documento.
+
 **Documento de Conceito do Produto — v1.0 | Maio 2026**
 
 Um jogo de frequência na academia onde batalhas PvP transformam o compromisso com o treino em competição direta. Lucha + Academia = Luchademia.
