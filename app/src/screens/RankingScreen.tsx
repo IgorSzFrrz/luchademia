@@ -1,200 +1,272 @@
-import { Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
 import { CrownTopIcon, LuchaMask, ScreenShell } from '../components';
+import { listIndividualRankings, type IndividualRanking } from '../lib/rankings';
+import { useAuth } from '../store/auth';
 import { useLD, FONT_DISP, FONT_MONO, FONT_UI_BOLD, FONT_UI_SEMI } from '../theme';
 
-const TOP = [
-  { pos: 1, name: 'Mariana', gym: 'BIO RITMO F.L.', wr: 87, w: 27, l: 4, hot: true },
-  { pos: 2, name: 'Pedro', gym: 'SMART FIT V.M.', wr: 84, w: 21, l: 4 },
-  { pos: 3, name: 'Diego', gym: 'CROSSFIT P.', wr: 78, w: 14, l: 4 },
-  { pos: 4, name: 'Helena', gym: 'SMART FIT V.M.', wr: 71, w: 12, l: 5 },
-  { pos: 5, name: 'Artur', gym: 'BODYTECH', wr: 68, w: 17, l: 8 },
-  { pos: 6, name: 'Lucas', gym: 'SELFIT', wr: 65, w: 13, l: 7 },
-  { pos: 7, name: 'Bruno', gym: 'SMART FIT V.M.', wr: 64, w: 12, l: 4, you: true },
-  { pos: 8, name: 'Sofia', gym: 'BIO RITMO', wr: 62, w: 18, l: 11 },
-];
-
 const TABS = [
-  { l: 'Individual', a: true },
-  { l: 'Battle Royale', a: false },
-  { l: 'Academia', a: false },
+  { label: 'Individual', active: true },
+  { label: 'Battle Royale', active: false },
+  { label: 'Academia', active: false },
 ];
 
 export function RankingScreen() {
   const LD = useLD();
+  const { user } = useAuth();
+  const [rankings, setRankings] = useState<IndividualRanking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadRankings = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const rows = await listIndividualRankings({ minFinished: 0 });
+      setRankings(rows);
+    } catch (loadError) {
+      const message = loadError instanceof Error ? loadError.message : 'Nao foi possivel carregar o ranking.';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadRankings().catch(() => undefined);
+  }, [loadRankings]);
+
+  const podium = rankings.slice(0, 3);
+  const tableRows = rankings.slice(3);
+  const myRank = useMemo(
+    () => rankings.find((row) => row.user_id === user?.id) ?? null,
+    [rankings, user?.id]
+  );
+
   return (
     <ScreenShell>
       <View style={{ paddingHorizontal: 20 }}>
         <Text style={{ fontFamily: FONT_DISP, fontSize: 36, color: LD.text, letterSpacing: -0.5, lineHeight: 36 }}>RANKING</Text>
         <Text style={{ fontFamily: FONT_UI_SEMI, fontSize: 13, color: LD.textDim, marginTop: 6 }}>
-          Você é o <Text style={{ color: LD.gold, fontFamily: FONT_UI_BOLD }}>#7</Text> · top 5% no Brasil.
+          {loading
+            ? 'Calculando vitorias...'
+            : myRank
+              ? `Voce e o #${myRank.rank_position} no ranking individual.`
+              : 'Ranking individual baseado em batalhas finalizadas.'}
         </Text>
       </View>
 
-      {/* Tabs */}
       <View style={{ flexDirection: 'row', paddingHorizontal: 20, marginTop: 16, borderBottomWidth: 1, borderBottomColor: LD.border }}>
-        {TABS.map((t) => (
+        {TABS.map((tab) => (
           <View
-            key={t.l}
+            key={tab.label}
             style={{
               flex: 1,
               paddingVertical: 10,
               alignItems: 'center',
               borderBottomWidth: 2,
-              borderBottomColor: t.a ? LD.gold : 'transparent',
+              borderBottomColor: tab.active ? LD.gold : 'transparent',
               marginBottom: -1,
+              opacity: tab.active ? 1 : 0.45,
             }}
           >
             <Text
               style={{
                 fontFamily: FONT_UI_BOLD,
                 fontSize: 11,
-                color: t.a ? LD.text : LD.textMuted,
+                color: tab.active ? LD.text : LD.textMuted,
                 letterSpacing: 1,
                 textTransform: 'uppercase',
+                textAlign: 'center',
               }}
+              numberOfLines={2}
             >
-              {t.l}
+              {tab.label}
             </Text>
           </View>
         ))}
       </View>
 
-      {/* Podium */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, justifyContent: 'center' }}>
-          {/* #2 */}
-          <View style={{ flex: 1, alignItems: 'center', gap: 6 }}>
-            <LuchaMask name="Pedro" size={48} />
-            <Text style={{ fontFamily: FONT_UI_BOLD, fontSize: 11, color: LD.text }}>PEDRO</Text>
-            <View
-              style={{
-                width: '100%',
-                height: 60,
-                backgroundColor: LD.surface2,
-                borderWidth: 1,
-                borderColor: LD.border,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Text style={{ fontFamily: FONT_DISP, fontSize: 28, color: '#C0C5CC', lineHeight: 28 }}>#2</Text>
-              <Text style={{ fontFamily: FONT_MONO, fontSize: 9, color: LD.textDim, letterSpacing: 1, marginTop: 2 }}>84%</Text>
-            </View>
-          </View>
-          {/* #1 */}
-          <View style={{ flex: 1, alignItems: 'center', gap: 6 }}>
-            <View style={{ position: 'relative' }}>
-              <LuchaMask name="Mariana" size={64} />
-              <View style={{ position: 'absolute', top: -16, alignSelf: 'center' }}>
-                <CrownTopIcon gold={LD.gold} deep={LD.goldDeep} blood={LD.blood} />
-              </View>
-            </View>
-            <Text style={{ fontFamily: FONT_UI_BOLD, fontSize: 12, color: LD.gold }}>MARIANA</Text>
-            <View
-              style={{
-                width: '100%',
-                height: 90,
-                backgroundColor: LD.gold,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Text style={{ fontFamily: FONT_DISP, fontSize: 42, color: LD.textInk, lineHeight: 42 }}>#1</Text>
-              <Text style={{ fontFamily: FONT_MONO, fontSize: 10, color: LD.textInk, letterSpacing: 1, marginTop: 2, fontWeight: '700' }}>
-                87% WR
-              </Text>
-            </View>
-          </View>
-          {/* #3 */}
-          <View style={{ flex: 1, alignItems: 'center', gap: 6 }}>
-            <LuchaMask name="Diego" size={48} />
-            <Text style={{ fontFamily: FONT_UI_BOLD, fontSize: 11, color: LD.text }}>DIEGO</Text>
-            <View
-              style={{
-                width: '100%',
-                height: 40,
-                backgroundColor: LD.surface2,
-                borderWidth: 1,
-                borderColor: LD.border,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Text style={{ fontFamily: FONT_DISP, fontSize: 22, color: '#A87F4D', lineHeight: 22 }}>#3</Text>
-              <Text style={{ fontFamily: FONT_MONO, fontSize: 9, color: LD.textDim, letterSpacing: 1, marginTop: 2 }}>78%</Text>
-            </View>
-          </View>
-        </View>
+      <View style={{ paddingHorizontal: 20, paddingTop: 18 }}>
+        {error ? <StatusBox text={error} danger onRetry={loadRankings} /> : null}
+        {!loading && !error && rankings.length === 0 ? (
+          <StatusBox text="Nenhuma batalha finalizada ainda. O ranking aparece depois do primeiro resultado." />
+        ) : null}
       </View>
 
-      {/* Header */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
-        <View style={{ flexDirection: 'row', paddingHorizontal: 6, paddingBottom: 6 }}>
-          <Text style={{ width: 28, fontFamily: FONT_MONO, fontSize: 9, color: LD.textMuted, letterSpacing: 2 }}>#</Text>
-          <Text style={{ flex: 1, fontFamily: FONT_MONO, fontSize: 9, color: LD.textMuted, letterSpacing: 2 }}>NOME</Text>
-          <Text style={{ width: 60, textAlign: 'right', fontFamily: FONT_MONO, fontSize: 9, color: LD.textMuted, letterSpacing: 2 }}>WR</Text>
-          <Text style={{ width: 50, textAlign: 'right', fontFamily: FONT_MONO, fontSize: 9, color: LD.textMuted, letterSpacing: 2 }}>W·L</Text>
+      {podium.length > 0 ? (
+        <View style={{ paddingHorizontal: 20, paddingTop: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, justifyContent: 'center' }}>
+            <PodiumSlot player={podium[1]} height={60} tone="#C0C5CC" />
+            <PodiumSlot player={podium[0]} height={90} first />
+            <PodiumSlot player={podium[2]} height={44} tone="#A87F4D" />
+          </View>
         </View>
+      ) : null}
 
-        {TOP.slice(3).map((p) => (
+      {rankings.length > 0 ? (
+        <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
+          <View style={{ flexDirection: 'row', paddingHorizontal: 6, paddingBottom: 6 }}>
+            <Text style={{ width: 32, fontFamily: FONT_MONO, fontSize: 9, color: LD.textMuted, letterSpacing: 2 }}>#</Text>
+            <Text style={{ flex: 1, fontFamily: FONT_MONO, fontSize: 9, color: LD.textMuted, letterSpacing: 2 }}>NOME</Text>
+            <Text style={{ width: 58, textAlign: 'right', fontFamily: FONT_MONO, fontSize: 9, color: LD.textMuted, letterSpacing: 2 }}>WR</Text>
+            <Text style={{ width: 54, textAlign: 'right', fontFamily: FONT_MONO, fontSize: 9, color: LD.textMuted, letterSpacing: 2 }}>W-L</Text>
+          </View>
+
+          {(tableRows.length ? tableRows : rankings).map((player) => (
+            <RankingRow key={player.user_id} player={player} isYou={player.user_id === user?.id} />
+          ))}
+
           <View
-            key={p.pos}
             style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingHorizontal: 6,
-              paddingVertical: 10,
-              backgroundColor: p.you ? LD.tintGold : 'transparent',
+              marginTop: 14,
+              padding: 10,
+              backgroundColor: LD.surface,
               borderWidth: 1,
-              borderColor: p.you ? LD.gold : 'transparent',
-              borderBottomWidth: 1,
-              borderBottomColor: p.you ? LD.gold : LD.surface2,
+              borderColor: LD.border,
+              alignItems: 'center',
             }}
           >
-            <Text style={{ width: 28, fontFamily: FONT_DISP, fontSize: 16, color: p.you ? LD.gold : LD.textDim }}>#{p.pos}</Text>
-            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <LuchaMask name={p.name} size={26} />
-              <View style={{ minWidth: 0, flex: 1 }}>
-                <Text style={{ fontFamily: FONT_UI_SEMI, fontSize: 12, color: p.you ? LD.gold : LD.text }}>
-                  {p.name}{p.you ? ' · você' : ''}
-                </Text>
-                <Text numberOfLines={1} style={{ fontFamily: FONT_MONO, fontSize: 8, color: LD.textMuted, letterSpacing: 1, marginTop: 1 }}>
-                  {p.gym}
-                </Text>
-              </View>
-            </View>
-            <Text
-              style={{
-                width: 60,
-                textAlign: 'right',
-                fontFamily: FONT_DISP,
-                fontSize: 16,
-                color: p.wr > 70 ? LD.vital : LD.text,
-              }}
-            >
-              {p.wr}%
-            </Text>
-            <Text style={{ width: 50, textAlign: 'right', fontFamily: FONT_MONO, fontSize: 11, color: LD.textDim }}>
-              {p.w}·{p.l}
+            <Text style={{ fontFamily: FONT_MONO, fontSize: 10, color: LD.textDim, letterSpacing: 0.5, textAlign: 'center' }}>
+              MVP: SEM MINIMO DE PARTIDAS. V1 USA MIN. 10 BATALHAS.
             </Text>
           </View>
-        ))}
+        </View>
+      ) : null}
+    </ScreenShell>
+  );
+}
 
-        <View
-          style={{
-            marginTop: 14,
-            padding: 10,
-            backgroundColor: LD.surface,
-            borderWidth: 1,
-            borderColor: LD.border,
-            alignItems: 'center',
-          }}
-        >
-          <Text style={{ fontFamily: FONT_MONO, fontSize: 10, color: LD.textDim, letterSpacing: 0.5 }}>
-            MÍN. 10 BATALHAS PRA APARECER · ATUALIZADO 14:02
+function PodiumSlot({ player, height, first, tone }: {
+  player?: IndividualRanking;
+  height: number;
+  first?: boolean;
+  tone?: string;
+}) {
+  const LD = useLD();
+
+  if (!player) {
+    return <View style={{ flex: 1 }} />;
+  }
+
+  const name = player.display_name.split(' ')[0] || player.display_name;
+
+  return (
+    <View style={{ flex: 1, alignItems: 'center', gap: 6 }}>
+      <View style={{ position: 'relative' }}>
+        <LuchaMask name={player.display_name} size={first ? 64 : 48} />
+        {first ? (
+          <View style={{ position: 'absolute', top: -16, alignSelf: 'center' }}>
+            <CrownTopIcon gold={LD.gold} deep={LD.goldDeep} blood={LD.blood} />
+          </View>
+        ) : null}
+      </View>
+      <Text
+        numberOfLines={1}
+        style={{
+          fontFamily: FONT_UI_BOLD,
+          fontSize: first ? 12 : 11,
+          color: first ? LD.gold : LD.text,
+          textTransform: 'uppercase',
+          maxWidth: '100%',
+        }}
+      >
+        {name}
+      </Text>
+      <View
+        style={{
+          width: '100%',
+          height,
+          backgroundColor: first ? LD.gold : LD.surface2,
+          borderWidth: first ? 0 : 1,
+          borderColor: LD.border,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Text style={{ fontFamily: FONT_DISP, fontSize: first ? 42 : 24, color: first ? LD.textInk : tone ?? LD.text, lineHeight: first ? 42 : 24 }}>
+          #{player.rank_position}
+        </Text>
+        <Text style={{ fontFamily: FONT_MONO, fontSize: first ? 10 : 9, color: first ? LD.textInk : LD.textDim, letterSpacing: 1, marginTop: 2 }}>
+          {Number(player.win_rate).toFixed(0)}% WR
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function RankingRow({ player, isYou }: { player: IndividualRanking; isYou: boolean }) {
+  const LD = useLD();
+
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 6,
+        paddingVertical: 10,
+        backgroundColor: isYou ? LD.tintGold : 'transparent',
+        borderWidth: 1,
+        borderColor: isYou ? LD.gold : 'transparent',
+        borderBottomWidth: 1,
+        borderBottomColor: isYou ? LD.gold : LD.surface2,
+      }}
+    >
+      <Text style={{ width: 32, fontFamily: FONT_DISP, fontSize: 16, color: isYou ? LD.gold : LD.textDim }}>
+        #{player.rank_position}
+      </Text>
+      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 0 }}>
+        <LuchaMask name={player.display_name} size={26} />
+        <View style={{ minWidth: 0, flex: 1 }}>
+          <Text numberOfLines={1} style={{ fontFamily: FONT_UI_SEMI, fontSize: 12, color: isYou ? LD.gold : LD.text }}>
+            {player.display_name}{isYou ? ' - voce' : ''}
+          </Text>
+          <Text numberOfLines={1} style={{ fontFamily: FONT_MONO, fontSize: 8, color: LD.textMuted, letterSpacing: 1, marginTop: 1 }}>
+            {(player.gym_name ?? 'SEM ACADEMIA').toUpperCase()}
           </Text>
         </View>
       </View>
-    </ScreenShell>
+      <Text
+        style={{
+          width: 58,
+          textAlign: 'right',
+          fontFamily: FONT_DISP,
+          fontSize: 16,
+          color: Number(player.win_rate) >= 70 ? LD.vital : LD.text,
+        }}
+      >
+        {Number(player.win_rate).toFixed(0)}%
+      </Text>
+      <Text style={{ width: 54, textAlign: 'right', fontFamily: FONT_MONO, fontSize: 11, color: LD.textDim }}>
+        {player.wins}-{player.losses}
+      </Text>
+    </View>
+  );
+}
+
+function StatusBox({ text, danger, onRetry }: { text: string; danger?: boolean; onRetry?: () => void }) {
+  const LD = useLD();
+
+  return (
+    <View
+      style={{
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        backgroundColor: LD.surface,
+        borderWidth: 1,
+        borderColor: danger ? LD.blood : LD.border,
+      }}
+    >
+      <Text style={{ fontFamily: FONT_MONO, fontSize: 10, color: danger ? LD.blood : LD.textDim, lineHeight: 16 }}>
+        {text}
+      </Text>
+      {onRetry ? (
+        <Pressable onPress={onRetry} style={{ marginTop: 10, alignSelf: 'flex-start', backgroundColor: LD.gold, paddingHorizontal: 10, paddingVertical: 6 }}>
+          <Text style={{ fontFamily: FONT_UI_BOLD, fontSize: 10, color: LD.textInk, letterSpacing: 1, textTransform: 'uppercase' }}>
+            Tentar de novo
+          </Text>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }

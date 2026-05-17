@@ -1,196 +1,357 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import Svg, { Line, Polyline, Rect } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BigNumber, HPBar, LuchaMask, Pill, SectionLabel } from '../components';
+import { getBattleDetail, type BattleDetail, type BattleTimelineDay } from '../lib/battleDetail';
 import { useLD, FONT_DISP, FONT_MONO, FONT_UI_BOLD, FONT_UI_SEMI } from '../theme';
 import type { AppStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'BattleDetail'>;
 
-const YOU_HP = [200, 195, 188, 180, 156];
-const OPP_HP = [200, 192, 174, 150, 132];
-
-type DayRow = {
-  d: number;
-  dateLabel: string;
-  youAt: string | null;
-  oppAt: string | null;
-  youDmg: number;
-  oppDmg: number;
-  note?: string;
-  today?: boolean;
-  future?: boolean;
-};
-
-const DAYS: DayRow[] = [
-  { d: 1, dateLabel: 'SEG', youAt: '06:42', oppAt: '07:11', youDmg: -5, oppDmg: -8, note: 'Ambos cedo' },
-  { d: 2, dateLabel: 'TER', youAt: '11:50', oppAt: '08:30', youDmg: -7, oppDmg: -18, note: 'Você atrasou' },
-  { d: 3, dateLabel: 'QUA', youAt: '07:08', oppAt: '14:20', youDmg: -8, oppDmg: -24, note: 'Artur só foi tarde' },
-  { d: 4, dateLabel: 'QUI', youAt: '10:42', oppAt: '10:15', youDmg: -24, oppDmg: -18, note: 'Hoje · Artur foi mais cedo', today: true },
-  { d: 5, dateLabel: 'SEX', youAt: null, oppAt: null, youDmg: 0, oppDmg: 0, future: true },
-];
-
-export function BattleDetailScreen({ navigation }: Props) {
+export function BattleDetailScreen({ navigation, route }: Props) {
   const LD = useLD();
-  const W = 280;
-  const H = 80;
-  const max = 200;
-  const stepX = W / (YOU_HP.length - 1);
+  const battleId = route.params?.battleId;
+  const [detail, setDetail] = useState<BattleDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const youPts = YOU_HP.map((v, i) => `${i * stepX},${H - (v / max) * H}`).join(' ');
-  const oppPts = OPP_HP.map((v, i) => `${i * stepX},${H - (v / max) * H}`).join(' ');
+  const load = useCallback(async () => {
+    if (!battleId) {
+      setLoading(false);
+      setError('Batalha nao informada.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getBattleDetail(battleId);
+      setDetail(data);
+      if (!data) setError('Batalha nao encontrada para este usuario.');
+    } catch (loadError) {
+      const message = loadError instanceof Error ? loadError.message : 'Nao foi possivel carregar a batalha.';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }, [battleId]);
+
+  useEffect(() => {
+    load().catch(() => undefined);
+  }, [load]);
+
+  const opponentName = detail?.opponent_name ?? 'Aguardando';
+  const opponentHp = detail?.opponent_hp ?? detail?.hp_base ?? 0;
+  const battleDay = detail ? getBattleDay(detail) : 0;
+  const isPending = detail?.battle_status === 'pending';
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: LD.bg }}>
       <ScrollView contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
-        {/* Top bar */}
         <View style={{ paddingHorizontal: 20, paddingTop: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Pressable
             onPress={() => navigation.goBack()}
             style={{ paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: LD.border }}
           >
             <Text style={{ fontFamily: FONT_UI_BOLD, fontSize: 11, color: LD.text, letterSpacing: 1, textTransform: 'uppercase' }}>
-              ‹ Voltar
+              Voltar
             </Text>
           </Pressable>
-          <Pill variant="live">Ao vivo</Pill>
+          <Pressable onPress={load}>
+            <Pill variant={detail?.battle_status === 'active' ? 'live' : 'gold'}>
+              {loading ? 'Carregando' : detail?.battle_status ?? 'Detalhe'}
+            </Pill>
+          </Pressable>
         </View>
 
-        {/* VS hero */}
-        <View style={{ paddingHorizontal: 20, paddingVertical: 20 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flex: 1, alignItems: 'center', gap: 6 }}>
-              <LuchaMask name="Bruno" size={64} />
-              <Text style={{ fontFamily: FONT_UI_BOLD, fontSize: 12, color: LD.text, letterSpacing: 0.5 }}>BRUNO</Text>
-              <BigNumber value="156" color={LD.text} size={36} suffix="/200" />
-            </View>
-            <View style={{ alignItems: 'center', gap: 4 }}>
-              <Text style={{ fontFamily: FONT_DISP, fontSize: 48, color: LD.blood, letterSpacing: -1, lineHeight: 48 }}>VS</Text>
-              <Text style={{ fontFamily: FONT_MONO, fontSize: 9, color: LD.textMuted, letterSpacing: 2 }}>DIA 4 / 5</Text>
-            </View>
-            <View style={{ flex: 1, alignItems: 'center', gap: 6 }}>
-              <LuchaMask name="Artur" size={64} />
-              <Text style={{ fontFamily: FONT_UI_BOLD, fontSize: 12, color: LD.text, letterSpacing: 0.5 }}>ARTUR</Text>
-              <BigNumber value="132" color={LD.text} size={36} suffix="/200" />
-            </View>
+        {error ? (
+          <View style={{ marginHorizontal: 20, marginTop: 18 }}>
+            <StatusBox text={error} danger />
           </View>
+        ) : null}
 
-          <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
-            <View style={{ flex: 1 }}>
-              <HPBar value={156} max={200} segments={10} height={12} showNumeric={false} align="right" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <HPBar value={132} max={200} segments={10} height={12} showNumeric={false} />
-            </View>
-          </View>
-        </View>
-
-        {/* Sparkline card */}
-        <View style={{ marginHorizontal: 20, marginBottom: 18, padding: 14, backgroundColor: LD.surface, borderWidth: 1, borderColor: LD.border }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <SectionLabel>HP AO LONGO DOS DIAS</SectionLabel>
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              <Legend swatchColor={LD.gold} label="VOCÊ" />
-              <Legend swatchColor={LD.blood} label="ARTUR" />
-            </View>
-          </View>
-          <Svg width="100%" height={80} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
-            {[0, 0.5, 1].map((p) => (
-              <Line key={p} x1={0} y1={H * p} x2={W} y2={H * p} stroke={LD.surface2} strokeWidth={1} />
-            ))}
-            <Polyline points={youPts} fill="none" stroke={LD.gold} strokeWidth={2.5} />
-            <Polyline points={oppPts} fill="none" stroke={LD.blood} strokeWidth={2.5} />
-            {YOU_HP.map((v, i) => (
-              <Rect key={'y' + i} x={i * stepX - 3} y={H - (v / max) * H - 3} width={6} height={6} fill={LD.gold} />
-            ))}
-            {OPP_HP.map((v, i) => (
-              <Rect key={'o' + i} x={i * stepX - 3} y={H - (v / max) * H - 3} width={6} height={6} fill={LD.blood} />
-            ))}
-          </Svg>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
-            {['D1', 'D2', 'D3', 'D4', 'D5'].map((d) => (
-              <Text key={d} style={{ fontFamily: FONT_MONO, fontSize: 9, color: LD.textMuted, letterSpacing: 1 }}>
-                {d}
-              </Text>
-            ))}
-          </View>
-        </View>
-
-        {/* Timeline */}
-        <View style={{ paddingHorizontal: 20 }}>
-          <SectionLabel style={{ marginBottom: 10 }}>TIMELINE</SectionLabel>
-          <View style={{ gap: 8 }}>
-            {DAYS.map((d) => {
-              const today = !!d.today;
-              const future = !!d.future;
-              return (
-                <View
-                  key={d.d}
-                  style={{
-                    flexDirection: 'row',
-                    gap: 12,
-                    paddingHorizontal: 14,
-                    paddingVertical: 12,
-                    backgroundColor: today ? LD.tintGold : LD.surface,
-                    borderWidth: 1,
-                    borderColor: today ? LD.gold : future ? LD.surface2 : LD.border,
-                    opacity: future ? 0.5 : 1,
-                  }}
-                >
-                  <View style={{ alignItems: 'center', justifyContent: 'center', minWidth: 36 }}>
-                    <Text style={{ fontFamily: FONT_MONO, fontSize: 8, color: LD.textMuted, letterSpacing: 1 }}>{d.dateLabel}</Text>
-                    <Text style={{ fontFamily: FONT_DISP, fontSize: 24, color: today ? LD.gold : LD.text, lineHeight: 24 }}>
-                      D{d.d}
-                    </Text>
-                  </View>
-                  <View style={{ width: 1, backgroundColor: LD.border }} />
-                  <View style={{ flex: 1 }}>
-                    {future ? (
-                      <Text style={{ fontFamily: FONT_MONO, fontSize: 11, color: LD.textMuted, letterSpacing: 1 }}>
-                        AMANHÃ · BATALHA TERMINA
-                      </Text>
-                    ) : (
-                      <>
-                        <Row name="Bruno" at={d.youAt!} dmg={d.youDmg} />
-                        <Row name="Artur" at={d.oppAt!} dmg={d.oppDmg} mt={4} />
-                        {d.note ? (
-                          <Text style={{ fontFamily: FONT_UI_SEMI, fontSize: 10, color: LD.textDim, marginTop: 6, fontStyle: 'italic' }}>
-                            {d.note}
-                          </Text>
-                        ) : null}
-                      </>
-                    )}
-                  </View>
+        {detail ? (
+          <>
+            <View style={{ paddingHorizontal: 20, paddingVertical: 20 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                <Fighter
+                  label="VOCE"
+                  name={detail.my_name}
+                  hp={detail.my_hp}
+                  max={detail.hp_base}
+                />
+                <View style={{ alignItems: 'center', gap: 4 }}>
+                  <Text style={{ fontFamily: FONT_DISP, fontSize: 48, color: isPending ? LD.gold : LD.blood, letterSpacing: 0, lineHeight: 48 }}>VS</Text>
+                  <Text style={{ fontFamily: FONT_MONO, fontSize: 9, color: LD.textMuted, letterSpacing: 2, textAlign: 'center' }}>
+                    {isPending ? 'AGUARDANDO' : `DIA ${battleDay} / ${detail.duration_days}`}
+                  </Text>
                 </View>
-              );
-            })}
-          </View>
-        </View>
+                <Fighter
+                  label={opponentName.toUpperCase()}
+                  name={opponentName}
+                  hp={opponentHp}
+                  max={detail.hp_base}
+                  muted={!detail.opponent_user_id}
+                />
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
+                <View style={{ flex: 1 }}>
+                  <HPBar value={detail.my_hp} max={detail.hp_base} segments={10} height={12} showNumeric={false} align="right" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <HPBar value={opponentHp} max={detail.hp_base} segments={10} height={12} showNumeric={false} />
+                </View>
+              </View>
+            </View>
+
+            <View style={{ marginHorizontal: 20, marginBottom: 18, padding: 14, backgroundColor: LD.surface, borderWidth: 1, borderColor: LD.border }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <SectionLabel>RESUMO</SectionLabel>
+                <Text style={{ fontFamily: FONT_MONO, fontSize: 9, color: LD.textMuted, letterSpacing: 1 }}>
+                  {detail.duration_days}D - {detail.hp_base} HP
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Metric label="Janela" value={`${padHour(detail.day_window_start_hour)}-${padHour(detail.day_window_end_hour)}`} />
+                <Metric label="No-show" value={`-${detail.no_show_penalty}`} />
+                <Metric label="PvP" value={`-${detail.pvp_damage_per_hour}/h`} />
+              </View>
+              {isPending ? (
+                <Text style={{ marginTop: 12, fontFamily: FONT_UI_SEMI, fontSize: 12, color: LD.textDim, lineHeight: 18 }}>
+                  Esta batalha esta aberta. Quando outro usuario aceitar, ela vira ativa e o dano diario passa a ser processado pelo job.
+                </Text>
+              ) : null}
+            </View>
+
+            <HpChart detail={detail} />
+
+            <View style={{ paddingHorizontal: 20 }}>
+              <SectionLabel style={{ marginBottom: 10 }}>TIMELINE</SectionLabel>
+              <View style={{ gap: 8 }}>
+                {detail.timeline.map((day) => (
+                  <TimelineRow
+                    key={`${day.battle_day}-${day.day_number}`}
+                    day={day}
+                    detail={detail}
+                    today={isToday(day.battle_day)}
+                  />
+                ))}
+              </View>
+            </View>
+          </>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function Row({ name, at, dmg, mt }: { name: string; at: string; dmg: number; mt?: number }) {
+function Fighter({ label, name, hp, max, muted }: {
+  label: string;
+  name: string;
+  hp: number;
+  max: number;
+  muted?: boolean;
+}) {
   const LD = useLD();
+
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: mt }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        <LuchaMask name={name} size={18} />
-        <Text style={{ fontFamily: FONT_MONO, fontSize: 11, color: LD.text }}>{at}</Text>
+    <View style={{ flex: 1, alignItems: 'center', gap: 6, opacity: muted ? 0.55 : 1, minWidth: 0 }}>
+      <LuchaMask name={name} size={64} />
+      <Text numberOfLines={1} style={{ fontFamily: FONT_UI_BOLD, fontSize: 12, color: LD.text, letterSpacing: 0.5, maxWidth: '100%' }}>
+        {label}
+      </Text>
+      <BigNumber value={String(hp)} color={LD.text} size={36} suffix={`/${max}`} />
+    </View>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  const LD = useLD();
+
+  return (
+    <View style={{ flex: 1, padding: 10, backgroundColor: LD.bg, borderWidth: 1, borderColor: LD.border }}>
+      <Text style={{ fontFamily: FONT_MONO, fontSize: 8, color: LD.textMuted, letterSpacing: 1, textTransform: 'uppercase' }}>{label}</Text>
+      <Text style={{ fontFamily: FONT_DISP, fontSize: 18, color: LD.gold, lineHeight: 20, marginTop: 3 }}>{value}</Text>
+    </View>
+  );
+}
+
+function HpChart({ detail }: { detail: BattleDetail }) {
+  const LD = useLD();
+  const W = 280;
+  const H = 80;
+  const mySeries = buildHpSeries(detail.hp_base, detail.my_hp, detail.timeline.map((day) => day.my_damage));
+  const opponentSeries = buildHpSeries(detail.hp_base, detail.opponent_hp ?? detail.hp_base, detail.timeline.map((day) => day.opponent_damage));
+  const stepX = W / Math.max(mySeries.length - 1, 1);
+  const myPts = mySeries.map((v, i) => `${i * stepX},${H - (v / detail.hp_base) * H}`).join(' ');
+  const opponentPts = opponentSeries.map((v, i) => `${i * stepX},${H - (v / detail.hp_base) * H}`).join(' ');
+
+  return (
+    <View style={{ marginHorizontal: 20, marginBottom: 18, padding: 14, backgroundColor: LD.surface, borderWidth: 1, borderColor: LD.border }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <SectionLabel>HP AO LONGO DOS DIAS</SectionLabel>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <Legend swatchColor={LD.gold} label="VOCE" />
+          <Legend swatchColor={LD.blood} label="RIVAL" />
+        </View>
       </View>
-      <Text style={{ fontFamily: FONT_DISP, fontSize: 16, color: LD.blood }}>{dmg}</Text>
+      <Svg width="100%" height={80} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+        {[0, 0.5, 1].map((p) => (
+          <Line key={p} x1={0} y1={H * p} x2={W} y2={H * p} stroke={LD.surface2} strokeWidth={1} />
+        ))}
+        <Polyline points={myPts} fill="none" stroke={LD.gold} strokeWidth={2.5} />
+        <Polyline points={opponentPts} fill="none" stroke={LD.blood} strokeWidth={2.5} />
+        {mySeries.map((v, i) => (
+          <Rect key={`my-${i}`} x={i * stepX - 3} y={H - (v / detail.hp_base) * H - 3} width={6} height={6} fill={LD.gold} />
+        ))}
+        {opponentSeries.map((v, i) => (
+          <Rect key={`op-${i}`} x={i * stepX - 3} y={H - (v / detail.hp_base) * H - 3} width={6} height={6} fill={LD.blood} />
+        ))}
+      </Svg>
+    </View>
+  );
+}
+
+function TimelineRow({ day, detail, today }: {
+  day: BattleTimelineDay;
+  detail: BattleDetail;
+  today: boolean;
+}) {
+  const LD = useLD();
+  const future = new Date(`${day.battle_day}T00:00:00`) > new Date();
+
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        gap: 12,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        backgroundColor: today ? LD.tintGold : LD.surface,
+        borderWidth: 1,
+        borderColor: today ? LD.gold : future ? LD.surface2 : LD.border,
+        opacity: future ? 0.55 : 1,
+      }}
+    >
+      <View style={{ alignItems: 'center', justifyContent: 'center', minWidth: 40 }}>
+        <Text style={{ fontFamily: FONT_MONO, fontSize: 8, color: LD.textMuted, letterSpacing: 1 }}>{weekday(day.battle_day)}</Text>
+        <Text style={{ fontFamily: FONT_DISP, fontSize: 24, color: today ? LD.gold : LD.text, lineHeight: 24 }}>
+          D{day.day_number}
+        </Text>
+      </View>
+      <View style={{ width: 1, backgroundColor: LD.border }} />
+      <View style={{ flex: 1 }}>
+        <TimelineLine name={detail.my_name} at={day.my_checkin_at} dmg={day.my_damage} />
+        <TimelineLine name={detail.opponent_name ?? 'Rival'} at={day.opponent_checkin_at} dmg={day.opponent_damage} mt={4} muted={!detail.opponent_user_id} />
+        <Text style={{ fontFamily: FONT_UI_SEMI, fontSize: 10, color: LD.textDim, marginTop: 6 }}>
+          {day.my_checkin_at || day.opponent_checkin_at ? 'Check-ins confirmados no dia.' : future ? 'Dia ainda nao abriu.' : 'Sem check-ins registrados.'}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function TimelineLine({ name, at, dmg, mt, muted }: {
+  name: string;
+  at: string | null;
+  dmg: number;
+  mt?: number;
+  muted?: boolean;
+}) {
+  const LD = useLD();
+
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: mt, opacity: muted ? 0.5 : 1 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0, flex: 1 }}>
+        <LuchaMask name={name} size={18} />
+        <Text numberOfLines={1} style={{ fontFamily: FONT_MONO, fontSize: 11, color: LD.text, flex: 1 }}>
+          {formatTime(at)}
+        </Text>
+      </View>
+      <Text style={{ fontFamily: FONT_DISP, fontSize: 16, color: dmg > 0 ? LD.blood : LD.textMuted }}>
+        {dmg > 0 ? `-${dmg}` : '0'}
+      </Text>
+    </View>
+  );
+}
+
+function StatusBox({ text, danger }: { text: string; danger?: boolean }) {
+  const LD = useLD();
+
+  return (
+    <View style={{ paddingHorizontal: 14, paddingVertical: 12, backgroundColor: LD.surface, borderWidth: 1, borderColor: danger ? LD.blood : LD.border }}>
+      <Text style={{ fontFamily: FONT_MONO, fontSize: 10, color: danger ? LD.blood : LD.textDim, lineHeight: 16 }}>
+        {text}
+      </Text>
     </View>
   );
 }
 
 function Legend({ swatchColor, label }: { swatchColor: string; label: string }) {
   const LD = useLD();
+
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
       <View style={{ width: 8, height: 2, backgroundColor: swatchColor }} />
       <Text style={{ fontFamily: FONT_MONO, fontSize: 9, color: LD.textDim, letterSpacing: 1 }}>{label}</Text>
     </View>
   );
+}
+
+function buildHpSeries(maxHp: number, currentHp: number, dailyDamage: number[]) {
+  let hp = maxHp;
+  const series = [hp];
+
+  for (const damage of dailyDamage) {
+    hp = Math.max(0, hp - damage);
+    series.push(hp);
+  }
+
+  if (dailyDamage.every((damage) => damage === 0)) {
+    series[series.length - 1] = currentHp;
+  }
+
+  return series;
+}
+
+function getBattleDay(detail: BattleDetail) {
+  if (detail.battle_status !== 'active') return 0;
+  const started = new Date(detail.starts_at).getTime();
+  const day = Math.floor((Date.now() - started) / 86400000) + 1;
+  return Math.min(Math.max(day, 1), detail.duration_days);
+}
+
+function formatTime(value?: string | null) {
+  if (!value) return '--:--';
+
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
+}
+
+function weekday(value: string) {
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    weekday: 'short',
+  }).format(new Date(`${value}T12:00:00`)).replace('.', '').toUpperCase();
+}
+
+function isToday(value: string) {
+  const today = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const parts = Object.fromEntries(today.map((part) => [part.type, part.value]));
+  return value === `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function padHour(hour: number) {
+  return `${String(hour).padStart(2, '0')}:00`;
 }

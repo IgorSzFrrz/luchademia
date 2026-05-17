@@ -23,7 +23,13 @@ luchademia/
 |   `-- .env.example        Variaveis publicas (Supabase, Google Maps)
 `-- supabase/
     `-- migrations/
-        `-- 0001_init.sql   Schema do MVP
+        |-- 0001_init.sql   Schema do MVP
+        |-- 0002_battle_mvp_rpcs.sql
+        |-- 0003_checkin_mvp.sql
+        |-- 0004_damage_and_rankings.sql
+        |-- 0005_home_mvp.sql
+        |-- 0006_battle_detail_mvp.sql
+        `-- 0007_profile_dashboard_mvp.sql
 ```
 
 ## Stack atual
@@ -70,10 +76,14 @@ dev client/EAS e uma biblioteca nativa dedicada.
 2. Em **SQL Editor**, rode o conteudo de `supabase/migrations/0001_init.sql`.
 3. Rode tambem `supabase/migrations/0002_battle_mvp_rpcs.sql`.
 4. Rode tambem `supabase/migrations/0003_checkin_mvp.sql`.
-5. Para teste local/MVP sem Google Places, rode `supabase/seed.sql`.
-6. Em **Authentication -> Providers**, habilite **Google**.
-7. Em **Authentication -> URL Configuration**, adicione `luchademia://auth/callback` em Redirect URLs.
-8. Copie `URL` e `anon key` para `app/.env`.
+5. Rode tambem `supabase/migrations/0004_damage_and_rankings.sql`.
+6. Rode tambem `supabase/migrations/0005_home_mvp.sql`.
+7. Rode tambem `supabase/migrations/0006_battle_detail_mvp.sql`.
+8. Rode tambem `supabase/migrations/0007_profile_dashboard_mvp.sql`.
+9. Para teste local/MVP sem Google Places, rode `supabase/seed.sql`.
+10. Em **Authentication -> Providers**, habilite **Google**.
+11. Em **Authentication -> URL Configuration**, adicione `luchademia://auth/callback` em Redirect URLs.
+12. Copie `URL` e `anon key` para `app/.env`.
 
 ## Estado atual
 
@@ -83,10 +93,14 @@ dev client/EAS e uma biblioteca nativa dedicada.
 - [x] Schema SQL inicial com RLS
 - [x] `app.json` alinhado a localizacao foreground para o MVP
 - [x] Scripts basicos de validacao
-- [ ] Google OAuth real
-- [ ] Selecao real de academia
+- [x] Google OAuth real
+- [x] Selecao real de academia
 - [x] Check-in real com GPS foreground + timer de 15 min + validacao server-side
 - [x] Criar/listar/aceitar batalha 1v1 aberta via RPC
-- [ ] Job de dano/no-show
+- [x] Job idempotente de dano/no-show
+- [x] Ranking individual basico via RPC
+- [x] Home conectada a profile, check-in do dia e batalhas 1v1 reais
+- [x] Detalhe da batalha 1v1 conectado a dados reais
+- [x] Perfil conectado a estatisticas, check-ins, streak e historico reais
 
 Roadmap completo na secao 10 do conceito.
