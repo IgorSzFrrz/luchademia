@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "Luchademia",
+    "slug": "luchademia",
+    "scheme": "luchademia",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B0F14"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.luchademia.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Luchademia usa sua localização para validar o check-in na sua academia.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Luchademia monitora sua permanência na academia em background durante os 15 minutos do check-in.",
+        "UIBackgroundModes": [
+          "location",
+          "fetch"
+        ]
+      }
+    },
+    "android": {
+      "package": "com.luchademia.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0B0F14"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Luchademia usa sua localização para validar o check-in na sua academia.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isIosBackgroundLocationEnabled": true
+        }
+      ],
+      "expo-notifications",
+      "expo-web-browser",
+      "expo-secure-store",
+      "expo-font"
+    ]
+  }
+}

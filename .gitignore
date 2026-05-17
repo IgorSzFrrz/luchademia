@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Expo / Metro
+.expo/
+**/.expo/
+.metro-health-check*
+**/.metro-health-check*
+expo-env.d.ts
+
+# Bundled output
+dist/
+web-build/
+**/dist/
+**/web-build/
+
+# Native generated folders (managed Expo)
+ios/
+android/
+.kotlin/
+**/.kotlin/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# TypeScript
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# Native signing material
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local agent / tool configs
+.claude/
+**/.claude/
+
+# Logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
