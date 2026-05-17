@@ -3,6 +3,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { makeRedirectUri } from 'expo-auth-session';
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import type { Profile, UUID } from '../types/domain';
 
@@ -159,6 +160,16 @@ export const useAuth = create<AuthState>((set, get) => ({
 
     set({ oauthLoading: true, error: null });
     try {
+      if (Platform.OS === 'web') {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo },
+        });
+
+        if (error) throw error;
+        return;
+      }
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {

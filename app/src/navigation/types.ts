@@ -2,8 +2,22 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 
 export type CheckinStackParamList = {
   Arrival: undefined;
-  Stay: undefined;
-  Done: undefined;
+  Stay: {
+    gymId: string;
+    gymName: string;
+    gymLat: number;
+    gymLng: number;
+    latitude: number;
+    longitude: number;
+    distanceMeters: number;
+    arrivedAt: string;
+  };
+  Done: {
+    gymName: string;
+    confirmedAt: string;
+    distanceMeters: number;
+    battleDay: string;
+  };
 };
 
 export type AppStackParamList = {
