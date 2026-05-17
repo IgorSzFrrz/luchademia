@@ -1,15 +1,18 @@
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Svg, { Circle, Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LuchaMask, GoogleGlyph } from '../../components';
+import { useAuth } from '../../store/auth';
 import { useLD, FONT_DISP, FONT_MONO, FONT_UI, FONT_UI_BOLD } from '../../theme';
-import type { OnboardingStackParamList } from '../../navigation/types';
 
-type Props = NativeStackScreenProps<OnboardingStackParamList, 'Welcome'>;
-
-export function WelcomeScreen({ navigation }: Props) {
+export function WelcomeScreen() {
   const LD = useLD();
+  const { signInWithGoogle, oauthLoading, error } = useAuth();
+
+  const handleGooglePress = useCallback(() => {
+    signInWithGoogle().catch(() => undefined);
+  }, [signInWithGoogle]);
 
   return (
     <View style={{ flex: 1, backgroundColor: LD.bg }}>
@@ -78,9 +81,10 @@ export function WelcomeScreen({ navigation }: Props) {
 
         <View style={{ gap: 10 }}>
           <Pressable
-            onPress={() => navigation.navigate('ChooseGym')}
+            disabled={oauthLoading}
+            onPress={handleGooglePress}
             style={{
-              backgroundColor: LD.gold,
+              backgroundColor: oauthLoading ? LD.surface3 : LD.gold,
               paddingVertical: 16,
               paddingHorizontal: 20,
               flexDirection: 'row',
@@ -94,14 +98,28 @@ export function WelcomeScreen({ navigation }: Props) {
               style={{
                 fontFamily: FONT_UI_BOLD,
                 fontSize: 15,
-                color: LD.textInk,
+                color: oauthLoading ? LD.textDim : LD.textInk,
                 letterSpacing: 1,
                 textTransform: 'uppercase',
               }}
             >
-              Continuar com Google
+              {oauthLoading ? 'Entrando...' : 'Continuar com Google'}
             </Text>
           </Pressable>
+          {error ? (
+            <Text
+              style={{
+                textAlign: 'center',
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                color: LD.blood,
+                letterSpacing: 0.5,
+                lineHeight: 16,
+              }}
+            >
+              {error}
+            </Text>
+          ) : null}
           <Text
             style={{
               textAlign: 'center',

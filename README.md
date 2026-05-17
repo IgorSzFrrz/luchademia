@@ -68,8 +68,11 @@ dev client/EAS e uma biblioteca nativa dedicada.
 
 1. Crie um projeto em [supabase.com](https://supabase.com).
 2. Em **SQL Editor**, rode o conteudo de `supabase/migrations/0001_init.sql`.
-3. Em **Authentication -> Providers**, habilite **Google**.
-4. Copie `URL` e `anon key` para `app/.env`.
+3. Rode tambem `supabase/migrations/0002_battle_mvp_rpcs.sql`.
+4. Para teste local/MVP sem Google Places, rode `supabase/seed.sql`.
+5. Em **Authentication -> Providers**, habilite **Google**.
+6. Em **Authentication -> URL Configuration**, adicione `luchademia://auth/callback` em Redirect URLs.
+7. Copie `URL` e `anon key` para `app/.env`.
 
 ## Estado atual
 
@@ -82,7 +85,7 @@ dev client/EAS e uma biblioteca nativa dedicada.
 - [ ] Google OAuth real
 - [ ] Selecao real de academia
 - [ ] Check-in real com GPS + timer de 15 min
-- [ ] Listagem real de batalhas
+- [x] Criar/listar/aceitar batalha 1v1 aberta via RPC
 - [ ] Edge Functions: validacao de check-in e job de dano/no-show
 
 Roadmap completo na secao 10 do conceito.

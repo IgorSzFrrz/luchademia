@@ -1,20 +1,13 @@
-import { CommonActions } from '@react-navigation/native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SearchIcon, SectionLabel } from '../../components';
+import { useAuth } from '../../store/auth';
 import { useLD, FONT_DISP, FONT_MONO, FONT_UI_SEMI } from '../../theme';
-import type { OnboardingStackParamList } from '../../navigation/types';
 
-type Props = NativeStackScreenProps<OnboardingStackParamList, 'Ready'>;
-
-export function ReadyScreen({ navigation }: Props) {
+export function ReadyScreen() {
   const LD = useLD();
-
-  const enter = () =>
-    navigation.dispatch(
-      CommonActions.reset({ index: 0, routes: [{ name: 'App' as never }] })
-    );
+  const completeOnboarding = useAuth((state) => state.completeOnboarding);
+  const enter = () => completeOnboarding();
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: LD.bg }}>

@@ -1,31 +1,82 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import Svg, { Circle, Line } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CheckIcon, ChevronLeftIcon, SectionLabel } from '../../components';
+import { isSupabaseConfigured, supabase } from '../../lib/supabase';
+import { useAuth } from '../../store/auth';
 import { useLD, FONT_DISP, FONT_MONO, FONT_UI_BOLD, FONT_UI_SEMI } from '../../theme';
 import type { OnboardingStackParamList } from '../../navigation/types';
+import type { Gym, UUID } from '../../types/domain';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'ChooseGym'>;
 
-const GYMS = [
-  { name: 'Smart Fit — Vila Madalena', dist: '0.4 km', selected: true, members: 1248 },
-  { name: 'Bio Ritmo Faria Lima', dist: '0.9 km', members: 892 },
-  { name: 'Selfit Pinheiros', dist: '1.2 km', members: 421 },
-  { name: 'Academia BodyTech', dist: '1.8 km', members: 311 },
-  { name: 'CrossFit Pinheiros', dist: '2.1 km', members: 47 },
-];
-
 export function ChooseGymScreen({ navigation }: Props) {
   const LD = useLD();
+  const { session, setGym, profileLoading, error } = useAuth();
+  const [gyms, setGyms] = useState<Gym[]>([]);
+  const [selectedGymId, setSelectedGymId] = useState<UUID | null>(null);
+  const [loadingGyms, setLoadingGyms] = useState(true);
+  const [gymError, setGymError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadGyms() {
+      if (!isSupabaseConfigured) {
+        setLoadingGyms(false);
+        setGymError('Configure o Supabase no app/.env para carregar academias.');
+        return;
+      }
+
+      try {
+        const { data, error: loadError } = await supabase
+          .from('gyms')
+          .select('id, google_place_id, name, address, lat, lng')
+          .order('name', { ascending: true });
+
+        if (loadError) throw loadError;
+        if (!alive) return;
+
+        const rows = (data ?? []) as Gym[];
+        setGyms(rows);
+        setSelectedGymId(rows[0]?.id ?? null);
+        setGymError(rows.length ? null : 'Nenhuma academia cadastrada no Supabase ainda.');
+      } catch (loadError) {
+        if (!alive) return;
+        const message = loadError instanceof Error ? loadError.message : 'Nao foi possivel carregar academias.';
+        setGymError(message);
+      } finally {
+        if (alive) setLoadingGyms(false);
+      }
+    }
+
+    loadGyms().catch(() => undefined);
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const selectedGym = useMemo(
+    () => gyms.find((gym) => gym.id === selectedGymId) ?? null,
+    [gyms, selectedGymId]
+  );
+
+  const confirmGym = async () => {
+    if (!selectedGymId) return;
+    const linked = await setGym(selectedGymId);
+    if (linked) navigation.navigate('Ready');
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: LD.bg }}>
       <View style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
-          {/* Header bar */}
           <View style={{ paddingHorizontal: 24, paddingTop: 8, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <Pressable
+              disabled={!!session}
               onPress={() => navigation.goBack()}
               style={{
                 width: 32,
@@ -34,6 +85,7 @@ export function ChooseGymScreen({ navigation }: Props) {
                 borderColor: LD.border,
                 alignItems: 'center',
                 justifyContent: 'center',
+                opacity: session ? 0.35 : 1,
               }}
             >
               <ChevronLeftIcon color={LD.text} />
@@ -45,18 +97,16 @@ export function ChooseGymScreen({ navigation }: Props) {
             </View>
           </View>
 
-          {/* Title */}
           <View style={{ paddingHorizontal: 24, paddingTop: 24 }}>
             <SectionLabel>PASSO 2 DE 3</SectionLabel>
             <Text style={{ fontFamily: FONT_DISP, fontSize: 40, lineHeight: 38, color: LD.text, marginTop: 8, letterSpacing: -0.5 }}>
               ESCOLHA SEU{'\n'}RINGUE
             </Text>
             <Text style={{ fontFamily: FONT_UI_SEMI, fontSize: 13, color: LD.textDim, marginTop: 10, lineHeight: 18 }}>
-              Sua academia define onde o check-in vale. Você pode trocar depois.
+              Sua academia define onde o check-in vale. Voce pode trocar depois.
             </Text>
           </View>
 
-          {/* Map */}
           <View
             style={{
               marginHorizontal: 24,
@@ -94,82 +144,112 @@ export function ChooseGymScreen({ navigation }: Props) {
                 borderColor: LD.border,
               }}
             >
-              <Text style={{ fontFamily: FONT_MONO, fontSize: 9, color: LD.textDim, letterSpacing: 1 }}>VOCÊ AQUI</Text>
+              <Text style={{ fontFamily: FONT_MONO, fontSize: 9, color: LD.textDim, letterSpacing: 1 }}>VOCE AQUI</Text>
             </View>
           </View>
 
-          {/* Gym list */}
           <View style={{ paddingHorizontal: 24, paddingTop: 16, gap: 8 }}>
-            {GYMS.map((g, i) => (
-              <View
-                key={g.name}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 12,
-                  paddingHorizontal: 14,
-                  paddingVertical: 12,
-                  backgroundColor: g.selected ? LD.surface2 : LD.surface,
-                  borderWidth: 1,
-                  borderColor: g.selected ? LD.gold : LD.border,
-                }}
-              >
-                <View
+            {loadingGyms ? <StatusBox text="Carregando academias..." /> : null}
+            {!loadingGyms && gymError ? <StatusBox text={gymError} danger /> : null}
+
+            {gyms.map((gym, index) => {
+              const selected = gym.id === selectedGymId;
+
+              return (
+                <Pressable
+                  key={gym.id}
+                  onPress={() => setSelectedGymId(gym.id)}
                   style={{
-                    width: 32,
-                    height: 32,
-                    backgroundColor: g.selected ? LD.gold : LD.surface3,
+                    flexDirection: 'row',
                     alignItems: 'center',
-                    justifyContent: 'center',
+                    gap: 12,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    backgroundColor: selected ? LD.surface2 : LD.surface,
+                    borderWidth: 1,
+                    borderColor: selected ? LD.gold : LD.border,
                   }}
                 >
-                  <Text
+                  <View
                     style={{
-                      fontFamily: FONT_DISP,
-                      fontSize: 18,
-                      color: g.selected ? LD.textInk : LD.textDim,
+                      width: 32,
+                      height: 32,
+                      backgroundColor: selected ? LD.gold : LD.surface3,
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}
                   >
-                    {i + 1}
-                  </Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text
-                    numberOfLines={1}
-                    style={{ fontFamily: FONT_UI_SEMI, fontSize: 13, color: LD.text }}
-                  >
-                    {g.name}
-                  </Text>
-                  <Text style={{ fontFamily: FONT_MONO, fontSize: 9, color: LD.textMuted, marginTop: 2, letterSpacing: 1 }}>
-                    {g.dist} · {g.members} LUCHADORES
-                  </Text>
-                </View>
-                {g.selected && <CheckIcon color={LD.gold} size={18} />}
-              </View>
-            ))}
+                    <Text style={{ fontFamily: FONT_DISP, fontSize: 18, color: selected ? LD.textInk : LD.textDim }}>
+                      {index + 1}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text numberOfLines={1} style={{ fontFamily: FONT_UI_SEMI, fontSize: 13, color: LD.text }}>
+                      {gym.name}
+                    </Text>
+                    <Text style={{ fontFamily: FONT_MONO, fontSize: 9, color: LD.textMuted, marginTop: 2, letterSpacing: 1 }}>
+                      {gym.address ?? 'Endereco nao informado'}
+                    </Text>
+                  </View>
+                  {selected ? <CheckIcon color={LD.gold} size={18} /> : null}
+                </Pressable>
+              );
+            })}
           </View>
         </ScrollView>
 
-        {/* CTA */}
         <View style={{ position: 'absolute', bottom: 24, left: 24, right: 24 }}>
           <Pressable
-            onPress={() => navigation.navigate('Ready')}
-            style={{ backgroundColor: LD.gold, paddingVertical: 16, alignItems: 'center' }}
+            disabled={!selectedGymId || profileLoading}
+            onPress={confirmGym}
+            style={{
+              backgroundColor: selectedGymId && !profileLoading ? LD.gold : LD.surface3,
+              paddingVertical: 16,
+              alignItems: 'center',
+            }}
           >
             <Text
               style={{
                 fontFamily: FONT_UI_BOLD,
                 fontSize: 14,
-                color: LD.textInk,
+                color: selectedGymId && !profileLoading ? LD.textInk : LD.textDim,
                 letterSpacing: 1,
                 textTransform: 'uppercase',
+                paddingHorizontal: 12,
+                textAlign: 'center',
               }}
+              numberOfLines={2}
             >
-              Confirmar Smart Fit Vila Madalena →
+              {profileLoading ? 'Vinculando...' : `Confirmar ${selectedGym?.name ?? 'academia'} ->`}
             </Text>
           </Pressable>
+          {error ? (
+            <Text style={{ marginTop: 8, textAlign: 'center', fontFamily: FONT_MONO, fontSize: 10, color: LD.blood, lineHeight: 16 }}>
+              {error}
+            </Text>
+          ) : null}
         </View>
       </View>
     </SafeAreaView>
+  );
+}
+
+function StatusBox({ text, danger }: { text: string; danger?: boolean }) {
+  const LD = useLD();
+
+  return (
+    <View
+      style={{
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        backgroundColor: LD.surface,
+        borderWidth: 1,
+        borderColor: danger ? LD.blood : LD.border,
+      }}
+    >
+      <Text style={{ fontFamily: FONT_MONO, fontSize: 10, color: danger ? LD.blood : LD.textDim, lineHeight: 16 }}>
+        {text}
+      </Text>
+    </View>
   );
 }
