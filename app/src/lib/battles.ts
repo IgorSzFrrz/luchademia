@@ -47,3 +47,14 @@ export async function acceptBattle(battleId: UUID): Promise<UUID> {
 
   return data as UUID;
 }
+
+export function createBattleInviteCode(battleId: UUID) {
+  return `LUCHA:${battleId}`;
+}
+
+export function parseBattleInviteCode(input: string): UUID | null {
+  const trimmed = input.trim();
+  const match = trimmed.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+
+  return match?.[0] ?? null;
+}

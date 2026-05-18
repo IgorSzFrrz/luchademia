@@ -4,7 +4,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import Svg, { Circle, Line } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CheckIcon, ChevronLeftIcon, SectionLabel } from '../../components';
-import { isSupabaseConfigured, supabase } from '../../lib/supabase';
+import { searchGymsForSelection } from '../../lib/gyms';
 import { useAuth } from '../../store/auth';
 import { useLD, FONT_DISP, FONT_MONO, FONT_UI_BOLD, FONT_UI_SEMI } from '../../theme';
 import type { OnboardingStackParamList } from '../../navigation/types';
@@ -24,25 +24,14 @@ export function ChooseGymScreen({ navigation }: Props) {
     let alive = true;
 
     async function loadGyms() {
-      if (!isSupabaseConfigured) {
-        setLoadingGyms(false);
-        setGymError('Configure o Supabase no app/.env para carregar academias.');
-        return;
-      }
-
       try {
-        const { data, error: loadError } = await supabase
-          .from('gyms')
-          .select('id, google_place_id, name, address, lat, lng')
-          .order('name', { ascending: true });
-
-        if (loadError) throw loadError;
+        const result = await searchGymsForSelection('nearby');
+        const rows = result.gyms;
         if (!alive) return;
 
-        const rows = (data ?? []) as Gym[];
         setGyms(rows);
         setSelectedGymId(rows[0]?.id ?? null);
-        setGymError(rows.length ? null : 'Nenhuma academia cadastrada no Supabase ainda.');
+        setGymError(rows.length ? result.message : result.message ?? 'Nenhuma academia cadastrada no Supabase ainda.');
       } catch (loadError) {
         if (!alive) return;
         const message = loadError instanceof Error ? loadError.message : 'Nao foi possivel carregar academias.';

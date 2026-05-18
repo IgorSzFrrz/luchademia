@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Share, Text, View } from 'react-native';
 import Svg, { Line, Polyline, Rect } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BigNumber, HPBar, LuchaMask, Pill, SectionLabel } from '../components';
+import { createBattleInviteCode } from '../lib/battles';
 import { getBattleDetail, type BattleDetail, type BattleTimelineDay } from '../lib/battleDetail';
 import { useLD, FONT_DISP, FONT_MONO, FONT_UI_BOLD, FONT_UI_SEMI } from '../theme';
 import type { AppStackParamList } from '../navigation/types';
@@ -46,6 +47,14 @@ export function BattleDetailScreen({ navigation, route }: Props) {
   const opponentHp = detail?.opponent_hp ?? detail?.hp_base ?? 0;
   const battleDay = detail ? getBattleDay(detail) : 0;
   const isPending = detail?.battle_status === 'pending';
+  const inviteCode = detail ? createBattleInviteCode(detail.battle_id) : '';
+
+  const shareInvite = async () => {
+    if (!inviteCode) return;
+    await Share.share({
+      message: `Entre na minha batalha do Luchademia: ${inviteCode}`,
+    });
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: LD.bg }}>
@@ -120,9 +129,27 @@ export function BattleDetailScreen({ navigation, route }: Props) {
                 <Metric label="PvP" value={`-${detail.pvp_damage_per_hour}/h`} />
               </View>
               {isPending ? (
-                <Text style={{ marginTop: 12, fontFamily: FONT_UI_SEMI, fontSize: 12, color: LD.textDim, lineHeight: 18 }}>
-                  Esta batalha esta aberta. Quando outro usuario aceitar, ela vira ativa e o dano diario passa a ser processado pelo job.
-                </Text>
+                <View style={{ marginTop: 12, gap: 10 }}>
+                  <Text style={{ fontFamily: FONT_UI_SEMI, fontSize: 12, color: LD.textDim, lineHeight: 18 }}>
+                    Esta batalha esta aberta. Envie o codigo abaixo para outro usuario aceitar e ativar o duelo.
+                  </Text>
+                  <View style={{ padding: 10, backgroundColor: LD.bg, borderWidth: 1, borderColor: LD.border }}>
+                    <Text style={{ fontFamily: FONT_MONO, fontSize: 10, color: LD.textMuted, letterSpacing: 1, marginBottom: 4 }}>
+                      CODIGO DE CONVITE
+                    </Text>
+                    <Text selectable style={{ fontFamily: FONT_MONO, fontSize: 12, color: LD.gold, lineHeight: 18 }}>
+                      {inviteCode}
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={shareInvite}
+                    style={{ backgroundColor: LD.gold, paddingVertical: 12, alignItems: 'center' }}
+                  >
+                    <Text style={{ fontFamily: FONT_UI_BOLD, fontSize: 12, color: LD.textInk, letterSpacing: 1, textTransform: 'uppercase' }}>
+                      Compartilhar convite
+                    </Text>
+                  </Pressable>
+                </View>
               ) : null}
             </View>
 

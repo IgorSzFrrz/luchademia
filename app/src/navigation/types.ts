@@ -25,6 +25,8 @@ export type AppStackParamList = {
   BattleDetail: { battleId?: string };
   Checkin: NavigatorScreenParams<CheckinStackParamList>;
   Conquistas: undefined;
+  ChangeGym: undefined;
+  InviteBattle: undefined;
 };
 
 export type RootStackParamList = {

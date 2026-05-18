@@ -147,7 +147,8 @@ export function ProfileScreen() {
         ))}
       </View>
 
-      <View
+      <Pressable
+        onPress={() => nav.navigate('ChangeGym')}
         style={{
           marginTop: 18,
           marginHorizontal: 20,
@@ -158,9 +159,9 @@ export function ProfileScreen() {
         }}
       >
         <Text style={{ fontFamily: FONT_UI_BOLD, fontSize: 11, color: LD.textDim, letterSpacing: 1, textTransform: 'uppercase' }}>
-          Trocar academia entra na proxima fase
+          Trocar academia
         </Text>
-      </View>
+      </Pressable>
     </ScreenShell>
   );
 }

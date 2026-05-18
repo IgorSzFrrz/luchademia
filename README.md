@@ -22,6 +22,8 @@ luchademia/
 |   |-- app.json            Config Expo
 |   `-- .env.example        Variaveis publicas (Supabase, Google Maps)
 `-- supabase/
+    |-- functions/
+    |   `-- search-gyms-nearby/
     `-- migrations/
         |-- 0001_init.sql   Schema do MVP
         |-- 0002_battle_mvp_rpcs.sql
@@ -85,6 +87,13 @@ dev client/EAS e uma biblioteca nativa dedicada.
 11. Em **Authentication -> URL Configuration**, adicione `luchademia://auth/callback` em Redirect URLs.
 12. Copie `URL` e `anon key` para `app/.env`.
 
+Para busca real de academias proximas, configure tambem a secret da Edge Function:
+
+```powershell
+supabase secrets set GOOGLE_PLACES_API_KEY=... --project-ref <project-ref>
+supabase functions deploy search-gyms-nearby --project-ref <project-ref>
+```
+
 ## Estado atual
 
 - [x] Scaffold Expo TS com tema customizado
@@ -102,5 +111,7 @@ dev client/EAS e uma biblioteca nativa dedicada.
 - [x] Home conectada a profile, check-in do dia e batalhas 1v1 reais
 - [x] Detalhe da batalha 1v1 conectado a dados reais
 - [x] Perfil conectado a estatisticas, check-ins, streak e historico reais
+- [x] Busca de academias por localizacao via Edge Function, com fallback para seed
+- [x] Convite 1v1 por codigo/link e aceite manual
 
 Roadmap completo na secao 10 do conceito.

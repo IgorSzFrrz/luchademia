@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { acceptBattle, listOpen1v1Battles, type OpenBattle } from '../lib/battles';
 import { LuchaMask, ScreenShell } from '../components';
 import { useLD, FONT_DISP, FONT_MONO, FONT_UI_BOLD, FONT_UI_SEMI } from '../theme';
+import type { AppStackParamList } from '../navigation/types';
 
 const FILTERS = [
   { l: 'Todos', a: false },
@@ -14,6 +17,7 @@ const FILTERS = [
 
 export function SearchScreen() {
   const LD = useLD();
+  const nav = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const [battles, setBattles] = useState<OpenBattle[]>([]);
   const [loading, setLoading] = useState(true);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
@@ -54,9 +58,21 @@ export function SearchScreen() {
   return (
     <ScreenShell>
       <View style={{ paddingHorizontal: 20 }}>
-        <Text style={{ fontFamily: FONT_DISP, fontSize: 36, color: LD.text, letterSpacing: -0.5, lineHeight: 36 }}>
-          BUSCAR ADVERSARIOS
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontFamily: FONT_DISP, fontSize: 36, color: LD.text, letterSpacing: -0.5, lineHeight: 36 }}>
+              BUSCAR ADVERSARIOS
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => nav.navigate('InviteBattle')}
+            style={{ paddingHorizontal: 10, paddingVertical: 8, backgroundColor: LD.surface, borderWidth: 1, borderColor: LD.border }}
+          >
+            <Text style={{ fontFamily: FONT_UI_BOLD, fontSize: 10, color: LD.gold, letterSpacing: 1, textTransform: 'uppercase' }}>
+              Convite
+            </Text>
+          </Pressable>
+        </View>
         <Text style={{ fontFamily: FONT_UI_SEMI, fontSize: 13, color: LD.textDim, marginTop: 6 }}>
           {loading ? 'Carregando desafios...' : `${battles.length} batalhas abertas agora.`}
         </Text>
