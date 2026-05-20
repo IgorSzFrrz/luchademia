@@ -1,5 +1,6 @@
 import * as Location from 'expo-location';
 import { isSupabaseConfigured, supabase } from './supabase';
+import { DEMO_GYM_ID, demoGyms, isDemoDataEnabled } from './demo';
 import type { Gym, UUID } from '../types/domain';
 
 export const CHECKIN_RADIUS_METERS = 100;
@@ -42,6 +43,17 @@ export function distanceMeters(a: { lat: number; lng: number }, b: { lat: number
 }
 
 export async function getLinkedGymDistance(gymId: UUID): Promise<GymDistance> {
+  if (isDemoDataEnabled) {
+    const gym = demoGyms.find((item) => item.id === gymId) ?? demoGyms[0];
+    return {
+      gym,
+      latitude: gym.lat + 0.00018,
+      longitude: gym.lng + 0.00012,
+      distanceMeters: 24,
+      insideRadius: true,
+    };
+  }
+
   if (!isSupabaseConfigured) {
     throw new Error('Supabase nao configurado.');
   }
@@ -83,6 +95,18 @@ export async function confirmCheckin(params: {
   longitude: number;
   arrivedAt: string;
 }): Promise<ConfirmedCheckin> {
+  if (isDemoDataEnabled) {
+    return {
+      checkin_id: '66666666-6666-4666-8666-666666666666',
+      gym_id: DEMO_GYM_ID,
+      gym_name: 'Smart Fit Vila Madalena',
+      distance_m: 24,
+      battle_day: new Date().toISOString().slice(0, 10),
+      arrived_at: params.arrivedAt,
+      confirmed_at: new Date().toISOString(),
+    };
+  }
+
   if (!isSupabaseConfigured) {
     throw new Error('Supabase nao configurado.');
   }

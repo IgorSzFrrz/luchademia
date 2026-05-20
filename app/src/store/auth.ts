@@ -5,6 +5,7 @@ import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { DEMO_GYM_ID, demoProfile, demoSession, demoUser, isDemoAppMode, isDemoDataEnabled, isDemoOnboardingMode } from '../lib/demo';
 import type { Profile, UUID } from '../types/domain';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -69,6 +70,18 @@ export const useAuth = create<AuthState>((set, get) => ({
   error: null,
 
   init: async () => {
+    if (isDemoDataEnabled) {
+      set({
+        session: demoSession,
+        user: demoUser,
+        profile: isDemoAppMode ? demoProfile : { ...demoProfile, gym_id: null },
+        loading: false,
+        profileLoading: false,
+        onboardingComplete: isDemoAppMode,
+      });
+      return;
+    }
+
     if (!isSupabaseConfigured) {
       set({ loading: false });
       return;
@@ -96,6 +109,12 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   refreshProfile: async (): Promise<Profile | null> => {
+    if (isDemoDataEnabled) {
+      const profile = isDemoAppMode ? demoProfile : { ...demoProfile, gym_id: null };
+      set({ profile, profileLoading: false, onboardingComplete: isDemoAppMode });
+      return profile;
+    }
+
     const user = get().user;
     if (!isSupabaseConfigured || !user) {
       set({ profile: null, profileLoading: false, onboardingComplete: false });
@@ -125,6 +144,16 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   setGym: async (gymId: UUID): Promise<boolean> => {
+    if (isDemoDataEnabled) {
+      set({
+        profile: { ...demoProfile, gym_id: gymId || DEMO_GYM_ID },
+        profileLoading: false,
+        onboardingComplete: false,
+        error: null,
+      });
+      return true;
+    }
+
     const user = get().user;
     if (!isSupabaseConfigured || !user) {
       set({ error: 'Sessao ausente. Entre novamente para escolher a academia.' });
@@ -153,6 +182,18 @@ export const useAuth = create<AuthState>((set, get) => ({
   completeOnboarding: () => set({ onboardingComplete: true }),
 
   signInWithGoogle: async (): Promise<void> => {
+    if (isDemoDataEnabled) {
+      set({
+        session: demoSession,
+        user: demoUser,
+        profile: isDemoOnboardingMode ? { ...demoProfile, gym_id: null } : demoProfile,
+        onboardingComplete: isDemoAppMode,
+        oauthLoading: false,
+        error: null,
+      });
+      return;
+    }
+
     if (!isSupabaseConfigured) {
       set({ error: 'Configure EXPO_PUBLIC_SUPABASE_URL e EXPO_PUBLIC_SUPABASE_ANON_KEY no app/.env.' });
       return;

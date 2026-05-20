@@ -1,4 +1,5 @@
 import { isSupabaseConfigured, supabase } from './supabase';
+import { DEMO_BATTLE_ID, demoOpenBattles, isDemoDataEnabled } from './demo';
 import type { UUID } from '../types/domain';
 
 export type OpenBattle = {
@@ -14,6 +15,7 @@ export type OpenBattle = {
 };
 
 export async function listOpen1v1Battles(): Promise<OpenBattle[]> {
+  if (isDemoDataEnabled) return demoOpenBattles;
   if (!isSupabaseConfigured) return [];
 
   const { data, error } = await supabase.rpc('list_open_1v1_battles');
@@ -23,6 +25,8 @@ export async function listOpen1v1Battles(): Promise<OpenBattle[]> {
 }
 
 export async function createOpen1v1Battle(durationDays: number): Promise<UUID> {
+  if (isDemoDataEnabled) return DEMO_BATTLE_ID;
+
   if (!isSupabaseConfigured) {
     throw new Error('Supabase nao configurado.');
   }
@@ -36,6 +40,8 @@ export async function createOpen1v1Battle(durationDays: number): Promise<UUID> {
 }
 
 export async function acceptBattle(battleId: UUID): Promise<UUID> {
+  if (isDemoDataEnabled) return battleId || DEMO_BATTLE_ID;
+
   if (!isSupabaseConfigured) {
     throw new Error('Supabase nao configurado.');
   }

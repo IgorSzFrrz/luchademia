@@ -1,4 +1,5 @@
 import { isSupabaseConfigured, supabase } from './supabase';
+import { demoRankings, isDemoDataEnabled } from './demo';
 import type { UUID } from '../types/domain';
 
 export type IndividualRanking = {
@@ -18,6 +19,8 @@ export async function listIndividualRankings(params?: {
   gymId?: UUID | null;
   minFinished?: number;
 }): Promise<IndividualRanking[]> {
+  if (isDemoDataEnabled) return demoRankings;
+
   if (!isSupabaseConfigured) return [];
 
   const { data, error } = await supabase.rpc('list_individual_rankings', {

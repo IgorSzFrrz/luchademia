@@ -1,4 +1,5 @@
 import { isSupabaseConfigured, supabase } from './supabase';
+import { demoHomeData, isDemoDataEnabled } from './demo';
 import type { UUID } from '../types/domain';
 
 export type HomeProfile = {
@@ -94,6 +95,8 @@ export function formatSeconds(seconds: number) {
 }
 
 export async function loadHomeData(userId: UUID): Promise<HomeData> {
+  if (isDemoDataEnabled) return demoHomeData();
+
   if (!isSupabaseConfigured) {
     return { profile: null, checkedToday: false, todayCheckin: null, battles: [] };
   }

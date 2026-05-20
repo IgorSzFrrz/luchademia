@@ -1,4 +1,5 @@
 import { isSupabaseConfigured, supabase } from './supabase';
+import { demoProfileDashboard, isDemoDataEnabled } from './demo';
 import type { BattleStatus, BattleType, UUID } from '../types/domain';
 
 export type RecentProfileBattle = {
@@ -33,6 +34,8 @@ export type ProfileDashboard = {
 };
 
 export async function getProfileDashboard(): Promise<ProfileDashboard | null> {
+  if (isDemoDataEnabled) return demoProfileDashboard;
+
   if (!isSupabaseConfigured) return null;
 
   const { data, error } = await supabase

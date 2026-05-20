@@ -1,4 +1,5 @@
 import { isSupabaseConfigured, supabase } from './supabase';
+import { demoBattleDetail, isDemoDataEnabled } from './demo';
 import type { BattleStatus, ParticipantStatus, UUID } from '../types/domain';
 
 export type BattleTimelineDay = {
@@ -37,6 +38,8 @@ export type BattleDetail = {
 };
 
 export async function getBattleDetail(battleId: UUID): Promise<BattleDetail | null> {
+  if (isDemoDataEnabled) return demoBattleDetail();
+
   if (!isSupabaseConfigured) return null;
 
   const { data, error } = await supabase

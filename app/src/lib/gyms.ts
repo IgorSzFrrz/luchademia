@@ -1,5 +1,6 @@
 import * as Location from 'expo-location';
 import { isSupabaseConfigured, supabase } from './supabase';
+import { demoGyms, isDemoDataEnabled } from './demo';
 import type { Gym } from '../types/domain';
 
 export type GymSearchMode = 'seed' | 'nearby';
@@ -43,6 +44,8 @@ export async function searchGymsForSelection(mode: GymSearchMode = 'seed'): Prom
 }
 
 async function listSeedGyms(): Promise<Gym[]> {
+  if (isDemoDataEnabled) return demoGyms;
+
   if (!isSupabaseConfigured) return [];
 
   const { data, error } = await supabase
@@ -56,6 +59,8 @@ async function listSeedGyms(): Promise<Gym[]> {
 }
 
 async function searchNearbyGyms(): Promise<Gym[]> {
+  if (isDemoDataEnabled) return demoGyms;
+
   if (!isSupabaseConfigured) return [];
 
   const permission = await Location.requestForegroundPermissionsAsync();
