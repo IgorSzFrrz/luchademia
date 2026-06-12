@@ -1,5 +1,5 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Svg, { Circle, Line } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,8 +24,10 @@ export function CheckinStayScreen({ navigation, route }: Props) {
   const [distance, setDistance] = useState(route.params.distanceMeters);
   const [outsideSeconds, setOutsideSeconds] = useState(0);
   const [confirming, setConfirming] = useState(false);
+  const [confirmAttempted, setConfirmAttempted] = useState(false);
   const [cancelled, setCancelled] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const confirmingRef = useRef(false);
 
   const startedAt = useMemo(() => new Date(route.params.arrivedAt).getTime(), [route.params.arrivedAt]);
   const elapsedSeconds = Math.max(0, Math.floor((now - startedAt) / 1000));
@@ -42,9 +44,10 @@ export function CheckinStayScreen({ navigation, route }: Props) {
 
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
+    let mounted = true;
 
     async function watchLocation() {
-      subscription = await Location.watchPositionAsync(
+      const nextSubscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.High,
           distanceInterval: 10,
@@ -63,14 +66,23 @@ export function CheckinStayScreen({ navigation, route }: Props) {
           setDistance(nextDistance);
         }
       );
+
+      if (!mounted) {
+        nextSubscription.remove();
+        return;
+      }
+
+      subscription = nextSubscription;
     }
 
     watchLocation().catch((watchError) => {
+      if (!mounted) return;
       const message = watchError instanceof Error ? watchError.message : 'Nao foi possivel monitorar localizacao.';
       setError(message);
     });
 
     return () => {
+      mounted = false;
       subscription?.remove();
     };
   }, [route.params.gymLat, route.params.gymLng]);
@@ -92,35 +104,39 @@ export function CheckinStayScreen({ navigation, route }: Props) {
     setError('Check-in cancelado: voce ficou mais de 3 min fora do raio da academia.');
   }, [cancelled, outsideSeconds]);
 
-  useEffect(() => {
-    if (remaining > 0 || confirming || cancelled) return;
+  const finishCheckin = useCallback(async () => {
+    if (confirmingRef.current || cancelled) return;
 
-    async function finishCheckin() {
-      setConfirming(true);
-      setError(null);
-      try {
-        const checkin = await confirmCheckin({
-          latitude,
-          longitude,
-          arrivedAt: route.params.arrivedAt,
-        });
+    confirmingRef.current = true;
+    setConfirmAttempted(true);
+    setConfirming(true);
+    setError(null);
+    try {
+      const checkin = await confirmCheckin({
+        latitude,
+        longitude,
+        arrivedAt: route.params.arrivedAt,
+      });
 
-        navigation.replace('Done', {
-          gymName: checkin.gym_name,
-          confirmedAt: checkin.confirmed_at,
-          distanceMeters: checkin.distance_m,
-          battleDay: checkin.battle_day,
-        });
-      } catch (confirmError) {
-        const message = confirmError instanceof Error ? confirmError.message : 'Nao foi possivel confirmar o check-in.';
-        setError(message);
-      } finally {
-        setConfirming(false);
-      }
+      navigation.replace('Done', {
+        gymName: checkin.gym_name,
+        confirmedAt: checkin.confirmed_at,
+        distanceMeters: checkin.distance_m,
+        battleDay: checkin.battle_day,
+      });
+    } catch (confirmError) {
+      const message = confirmError instanceof Error ? confirmError.message : 'Nao foi possivel confirmar o check-in.';
+      setError(message);
+    } finally {
+      confirmingRef.current = false;
+      setConfirming(false);
     }
+  }, [cancelled, latitude, longitude, navigation, route.params.arrivedAt]);
 
+  useEffect(() => {
+    if (remaining > 0 || confirming || cancelled || confirmAttempted) return;
     finishCheckin().catch(() => undefined);
-  }, [cancelled, confirming, latitude, longitude, navigation, remaining, route.params.arrivedAt]);
+  }, [cancelled, confirmAttempted, confirming, finishCheckin, remaining]);
 
   const minutes = Math.floor(remaining / 60).toString().padStart(2, '0');
   const seconds = (remaining % 60).toString().padStart(2, '0');
@@ -245,6 +261,17 @@ export function CheckinStayScreen({ navigation, route }: Props) {
           <Text style={{ marginTop: 12, fontFamily: FONT_MONO, fontSize: 10, color: LD.blood, textAlign: 'center', lineHeight: 16 }}>
             {error}
           </Text>
+        ) : null}
+        {error && remaining === 0 && !cancelled ? (
+          <Pressable
+            disabled={confirming}
+            onPress={() => finishCheckin().catch(() => undefined)}
+            style={{ marginTop: 16, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: confirming ? LD.surface3 : LD.gold }}
+          >
+            <Text style={{ fontFamily: FONT_UI_BOLD, fontSize: 12, color: confirming ? LD.textDim : LD.textInk, letterSpacing: 1, textTransform: 'uppercase' }}>
+              {confirming ? 'Confirmando...' : 'Tentar novamente'}
+            </Text>
+          </Pressable>
         ) : null}
       </View>
     </SafeAreaView>
